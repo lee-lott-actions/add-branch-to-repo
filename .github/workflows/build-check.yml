@@ -1,0 +1,73 @@
+name: Build Check
+
+on:
+  pull_request:
+    branches: [ "development","main" ]
+
+jobs:
+  tests:
+    name: Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'        
+      
+      - name: Install Node Dependencies
+        run: npm install
+        working-directory: ${{ github.workspace }}
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats curl jq
+
+      - name: Start Mock Server
+        run: |
+          killall node || true
+          node tests/mock-server.js > mock-server.log 2>&1 &
+          for i in {1..5}; do
+            sleep 5
+            if nc -z 127.0.0.1 3000; then
+              echo "Mock server started successfully"
+              cat mock-server.log
+              break
+            fi
+            echo "Waiting for mock server (attempt $i/5)"
+          done
+          if ! nc -z 127.0.0.1 3000; then
+            echo "ERROR: Mock server failed to start"
+            cat mock-server.log
+            exit 1
+          fi
+        env:
+          MOCK_API: http://127.0.0.1:3000
+
+      - name: Run Unit Tests
+        run: bats tests/unit-tests.bats
+
+      - name: Run Integration Tests
+        id: integration-tests
+        uses: ./
+        with:
+          repo-name: 'TestRepo'
+          owner: 'la-ots-engineering'
+          token: 'fake-token'
+          branch-name: 'development'
+        env:
+          MOCK_API: http://127.0.0.1:3000
+
+      - name: Check Integration Test Result
+        run: |
+          if [[ "${{ steps.integration-tests.outputs.result }}" == "success" ]]; then
+            echo "Test passed: Integration test simulated successfully."
+          else
+            echo "Test failed: ${{ steps.create.outputs.error-message }}"
+            exit 1
+          fi
+        shell: bash
