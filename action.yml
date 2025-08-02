@@ -1,7 +1,6 @@
 name: Add Branch
 description: A GitHub Action to add a specified branch to a repository using the GitHub API
-author: Louisiana Office of Technology Services
-
+author: Lee Lott
 inputs:
   repo-name:
     description: 'The name of the repository to add the branch to'
