@@ -1,0 +1,35 @@
+name: Add Branch
+description: A GitHub Action to add a specified branch to a repository using the GitHub API
+author: Louisiana Office of Technology Services
+
+inputs:
+  repo-name:
+    description: 'The name of the repository to add the branch to'
+    required: true
+  owner:
+    description: 'The owner of the repository (user or organization)'
+    required: true
+  token:
+    description: 'GitHub token with repository write access'
+    required: true
+  branch-name:
+    description: 'The name of the branch to create'
+    required: true
+
+outputs:
+  result:
+    description: 'Result of the branch creation ("success" or "failure")'
+    value: ${{ steps.action.outputs.result }}
+  error-message:
+    description: 'Error message if the branch creation fails'
+    value: ${{ steps.action.outputs.error-message }}
+
+runs:
+  using: composite
+  steps:
+    - name: Add Branch
+      id: action
+      run: |
+        source ${{ github.action_path }}/action.sh
+        add_branch "${{ inputs.repo-name }}" "${{ inputs.owner }}" "${{ inputs.token }}" "${{ inputs.branch-name }}"
+      shell: bash

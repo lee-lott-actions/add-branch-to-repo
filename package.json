@@ -1,0 +1,18 @@
+{
+  "name": "add-branch-to-repo",
+  "version": "1.0.0",
+  "description": "A GitHub Action to create a specified branch in a repository using the GitHub API.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
