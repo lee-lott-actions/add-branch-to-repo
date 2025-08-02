@@ -1,0 +1,66 @@
+name: Publish Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name for the release (e.g., v1.0.0)'
+        required: true
+        type: string
+      branch:
+        description: 'Branch to create the release from'
+        required: true
+        type: choice
+        options:
+          - main
+          - development
+
+jobs:
+  publish-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Validate tag format
+        run: |
+          if [[ ! "${{ github.event.inputs.tag }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Tag must follow semantic versioning (e.g., v1.0.0)"
+            exit 1
+          fi
+
+      - name: Check if tag exists
+        run: |
+          if git rev-parse "${{ github.event.inputs.tag }}" >/dev/null 2>&1; then
+            echo "Error: Tag ${{ github.event.inputs.tag }} already exists"
+            exit 1
+          fi          
+
+      - name: Set prerelease flag
+        id: set_prerelease
+        run: |
+          if [ "${{ github.event.inputs.branch }}" = "main" ]; then
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create tag
+        run: |
+          git tag ${{ github.event.inputs.tag }}
+          git push origin ${{ github.event.inputs.tag }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          name: Release ${{ github.event.inputs.tag }}
+          draft: false
+          prerelease: ${{ steps.set_prerelease.outputs.prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
