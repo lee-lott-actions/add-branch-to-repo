@@ -62,7 +62,6 @@ add_branch() {
     -H "Authorization: Bearer $token" \
     -H "Accept: application/vnd.github.v3+json" \
     -H "Content-Type: application/json" \
-    -H "Content-Type: application/json" \
     $api_base_url/repos/$owner/$repo_name/git/refs \
     -d "{\"ref\": \"refs/heads/$branch_name\", \"sha\": \"$SHA\"}")
     
