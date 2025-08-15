@@ -7,24 +7,16 @@ on:
         description: 'Tag name for the release (e.g., v1.0.0)'
         required: true
         type: string
-      branch:
-        description: 'Branch to create the release from'
-        required: true
-        type: choice
-        options:
-          - main
-          - development
 
 jobs:
   publish-release:
+    name: Publish Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.branch }}
 
       - name: Validate tag format
         run: |
@@ -40,27 +32,30 @@ jobs:
             exit 1
           fi          
 
-      - name: Set prerelease flag
-        id: set_prerelease
-        run: |
-          if [ "${{ github.event.inputs.branch }}" = "main" ]; then
-            echo "prerelease=false" >> $GITHUB_OUTPUT
-          else
-            echo "prerelease=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: Create tag
         run: |
           git tag ${{ github.event.inputs.tag }}
           git push origin ${{ github.event.inputs.tag }}
 
+      - name: Create major version tag
+        run: |
+          MAJOR_TAG=$(echo "${{ github.event.inputs.tag }}" | sed -E 's/^v([0-9]+)\.[0-9]+\.[0-9]+$/\1/')
+          # Delete the major version tag locally and remotely if it exists
+          git tag -d "v$MAJOR_TAG" 2>/dev/null || true
+          git push origin --delete "v$MAJOR_TAG" 2>/dev/null || true
+          
+          # Create and push the new major version tag
+          git tag "v$MAJOR_TAG"
+          git push origin "v$MAJOR_TAG"
+          echo "Created and pushed major version tag v$MAJOR_TAG"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag }}
-          name: Release ${{ github.event.inputs.tag }}
+          name: ${{ github.event.inputs.tag }}
           draft: false
-          prerelease: ${{ steps.set_prerelease.outputs.prerelease }}
+          prerelease: false
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

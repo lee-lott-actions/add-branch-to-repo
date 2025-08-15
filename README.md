@@ -41,7 +41,7 @@ This GitHub Action adds a specified branch to a repository using the GitHub API.
        steps:
          - name: Add Branch
            id: add
-           uses: lee-lott-actions/add-branch-to-repo@v1.0.0
+           uses: lee-lott-actions/add-branch-to-repo@v1
            with:
              repo-name: 'my-repo'
              owner: ${{ github.repository_owner }}
