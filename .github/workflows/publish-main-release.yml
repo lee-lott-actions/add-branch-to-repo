@@ -1,0 +1,121 @@
+name: Release - Main
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+env:
+  PRERELEASE: false
+  PRERELEASE_SUFFIX: 'Dev'
+  AUTO_MERGE_SOURCE_BRANCH: 'main'
+  AUTO_MERGE_TARGET_BRANCH: 'development'
+
+permissions:
+  contents: write
+  actions: write
+  pull-requests: write
+
+jobs:
+  create-github-release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.user.login != vars.DEVOPS_BOT_NAME
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      version-tag: ${{ steps.build-project.outputs.version-tag }}
+      build-status: ${{ steps.build-project.outputs.build-status }}
+
+    steps:
+      - name: Setup
+        uses: actions/checkout@v6
+
+      - name: Get GitHub App Token
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.DEVOPSBOT_APP_ID }}
+          private-key: ${{ secrets.DEVOPSBOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}      
+          permission-contents: write
+          permission-pull-requests: write          
+          
+      - name: Build GitHub Action
+        id: build-project
+        uses: lee-lott-actions/build-github-action-release@v1
+        with:
+          prerelease: ${{ env.PRERELEASE }}
+          prerelease-suffix: ${{ env.PRERELEASE_SUFFIX }}
+          token: ${{ steps.token.outputs.token }}
+
+  deploy-github-action:
+    name: Deploy GitHub Action
+    runs-on: ubuntu-latest
+    needs: [ create-github-release ]
+    if: ${{ needs.create-github-release.outputs.build-status == 'Release Created' }}
+    env:
+      version-tag: ${{ needs.create-github-release.outputs.version-tag }}
+
+    steps:
+      - name: Setup
+        uses: actions/checkout@v6
+
+      - name: Get GitHub App Token
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.DEVOPSBOT_APP_ID }}
+          private-key: ${{ secrets.DEVOPSBOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}      
+          permission-contents: write
+          permission-pull-requests: write           
+          
+      - name: Deploy GitHub Action
+        uses: lee-lott-actions/deploy-github-action@v1
+        with:
+          version-tag: ${{ env.version-tag }}
+          branch-name: ${{ github.ref_name }}
+          org-name: ${{ github.repository_owner }}     
+          repo-name: ${{ github.event.repository.name }}
+          token: ${{ steps.token.outputs.token }}
+
+  auto-merge:
+    if: github.event.pull_request.merged == true
+    name: Auto-Merge Main To Development
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get GitHub App Token
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.DEVOPSBOT_APP_ID }}
+          private-key: ${{ secrets.DEVOPSBOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-contents: write
+          permission-pull-requests: write
+                    
+      - name: Auto Merge Main To Development
+        id: auto-merge
+        uses: lee-lott-actions/auto-merge-branch@v1
+        with:
+          repo-name: ${{ github.event.repository.name }}
+          org-name: ${{ github.repository_owner }}
+          source-branch: ${{ env.AUTO_MERGE_SOURCE_BRANCH }}
+          target-branch: ${{ env.AUTO_MERGE_TARGET_BRANCH }}
+          token: ${{ steps.token.outputs.token }}          
+            
+  pull-request-not-merged:
+    if: github.event.pull_request.merged == false
+    name: Cancel Release
+    runs-on: ubuntu-latest
+    steps:
+    - run: |
+        Write-Output "Pull Request was not merged with branch. Release was canceled."
+      shell: pwsh

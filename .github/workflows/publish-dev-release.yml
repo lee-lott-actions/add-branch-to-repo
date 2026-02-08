@@ -1,0 +1,57 @@
+name: Release - Development
+
+on:
+  pull_request:
+    branches:
+      - development
+    types:
+      - closed
+
+env:
+  PRERELEASE: true
+  PRERELEASE_SUFFIX: 'Dev'
+
+permissions:
+  contents: write
+  actions: write
+  pull-requests: write
+
+jobs:
+  create-github-release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.user.login != vars.DEVOPS_BOT_NAME
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      version-tag: ${{ steps.build-project.outputs.version-tag }}
+      build-status: ${{ steps.build-project.outputs.build-status }}
+
+    steps:
+      - name: Setup
+        uses: actions/checkout@v6
+
+      - name: Get GitHub App Token
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.DEVOPSBOT_APP_ID }}
+          private-key: ${{ secrets.DEVOPSBOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}      
+          permission-contents: write
+          permission-pull-requests: write          
+          
+      - name: Build GitHub Action
+        id: build-project
+        uses: lee-lott-actions/build-github-action-release@v1
+        with:
+          prerelease: ${{ env.PRERELEASE }}
+          prerelease-suffix: ${{ env.PRERELEASE_SUFFIX }}
+          token: ${{ steps.token.outputs.token }}
+            
+  pull-request-not-merged:
+    if: github.event.pull_request.merged == false
+    name: Cancel Release
+    runs-on: ubuntu-latest
+    steps:
+    - run: |
+        Write-Output "Pull Request was not merged with branch. Release was canceled."
+      shell: pwsh

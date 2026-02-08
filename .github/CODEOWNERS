@@ -1,0 +1,4 @@
+*  @lee-lott-actions/code-approvers
+.github/CODEOWNERS  @lee-lott-actions/code-approvers-admins
+.github/*.md  @lee-lott-actions/code-approvers-admins
+.github/*.yml @lee-lott-actions/code-approvers-admins
