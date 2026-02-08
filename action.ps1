@@ -135,7 +135,7 @@ function Add-Branch {
 
 		if ([string]::IsNullOrEmpty($message)) { $message = "Unknown error" }
 
-		$errorMsg = "Error: Failed to create branch $BranchName: $message"
+		$errorMsg = "Error: Failed to create branch $($BranchName): $message"
 		Add-Content -Path $env:GITHUB_OUTPUT -Value "result=failure"
 		Add-Content -Path $env:GITHUB_OUTPUT -Value "error-message=$errorMsg"
 		Write-Host $errorMsg
