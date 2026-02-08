@@ -11,45 +11,44 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.2.2
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'        
-      
-      - name: Install Node Dependencies
-        run: npm install
-        working-directory: ${{ github.workspace }}
-
-      - name: Install System Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y bats curl jq
+        uses: actions/checkout@v6
 
       - name: Start Mock Server
+        shell: pwsh
         run: |
-          killall node || true
-          node tests/mock-server.js > mock-server.log 2>&1 &
-          for i in {1..5}; do
-            sleep 5
-            if nc -z 127.0.0.1 3000; then
-              echo "Mock server started successfully"
-              cat mock-server.log
-              break
-            fi
-            echo "Waiting for mock server (attempt $i/5)"
-          done
-          if ! nc -z 127.0.0.1 3000; then
-            echo "ERROR: Mock server failed to start"
-            cat mock-server.log
+          # Start mock server in background
+          Start-Process pwsh -ArgumentList "-File", "${{ github.workspace }}/tests/Start-MockServer.ps1" -NoNewWindow
+          
+          # Wait for server to be ready
+          $maxAttempts = 10
+          $attempt = 0
+          $serverReady = $false
+          
+          while ($attempt -lt $maxAttempts -and -not $serverReady) {
+            $attempt++
+            Start-Sleep -Seconds 2
+            try {
+              $response = Invoke-WebRequest -Uri "http://127.0.0.1:3000/HealthCheck" -TimeoutSec 2 -ErrorAction SilentlyContinue
+              if ($response.StatusCode -eq 200) {
+                Write-Host "Mock server started successfully"
+                $serverReady = $true
+              }
+            } catch {
+              Write-Host "Waiting for mock server (attempt $attempt/$maxAttempts)"
+            }
+          }
+          
+          if (-not $serverReady) {
+            Write-Host "ERROR: Mock server failed to start"
             exit 1
-          fi
+          }
         env:
-          MOCK_API: http://127.0.0.1:3000
-
-      - name: Run Unit Tests
-        run: bats tests/unit-tests.bats
+          MOCK_API: http://127.0.0.1:3000      
+      
+      - name: Run Pester Unit Tests
+        shell: pwsh
+        run: |
+          Invoke-Pester -Path ./tests/action.Tests.ps1
 
       - name: Run Integration Tests
         id: integration-tests
@@ -63,11 +62,11 @@ jobs:
           MOCK_API: http://127.0.0.1:3000
 
       - name: Check Integration Test Result
+        shell: pwsh
         run: |
-          if [[ "${{ steps.integration-tests.outputs.result }}" == "success" ]]; then
-            echo "Test passed: Integration test simulated successfully."
-          else
-            echo "Test failed: ${{ steps.create.outputs.error-message }}"
+          if ("${{ steps.integration-tests.outputs.result }}" -eq "success") {
+            Write-Host "Test passed: Integration test simulated successfully."
+          } else {
+            Write-Host "Test failed: ${{ steps.integration-tests.outputs.error-message }}"
             exit 1
-          fi
-        shell: bash
+          }

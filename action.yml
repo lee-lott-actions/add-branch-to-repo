@@ -28,7 +28,7 @@ runs:
   steps:
     - name: Add Branch
       id: action
+      shell: pwsh
       run: |
-        source ${{ github.action_path }}/action.sh
-        add_branch "${{ inputs.repo-name }}" "${{ inputs.owner }}" "${{ inputs.token }}" "${{ inputs.branch-name }}"
-      shell: bash
+        . "${{ github.action_path }}/action.ps1"
+        Add-Branch "${{ inputs.repo-name }}" "${{ inputs.owner }}" "${{ inputs.token }}" "${{ inputs.branch-name }}"
