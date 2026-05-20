@@ -31,4 +31,8 @@ runs:
       shell: pwsh
       run: |
         . "${{ github.action_path }}/action.ps1"
-        Add-Branch "${{ inputs.repo-name }}" "${{ inputs.owner }}" "${{ inputs.token }}" "${{ inputs.branch-name }}"
+        Add-Branch `
+          -RepoName "${{ inputs.repo-name }}" `
+          -Owner "${{ inputs.owner }}" `
+          -Token "${{ inputs.token }}" `
+          -BranchName "${{ inputs.branch-name }}"
