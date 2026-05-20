@@ -18,23 +18,23 @@ function Add-Branch {
 		return
 	}
 
-	Write-Host "Creating branch $BranchName for repository $Owner/$RepoName"
-
 	# Use MOCK_API if set, otherwise default to GitHub API
 	$apiBaseUrl = $env:MOCK_API
 	if (-not $apiBaseUrl) { $apiBaseUrl = "https://api.github.com" }
 
 	$headers = @{
 		Authorization = "Bearer $Token"
-		Accept = "application/vnd.github.v3+json"
+		Accept = "application/vnd.github+json"
 		"X-GitHub-Api-Version" = "2026-03-10"
 		"Content-Type" = "application/json"
 	}
 
+	Write-Host "Creating branch $BranchName for repository $Owner/$RepoName"
+	
 	# 1) Fetch default branch
 	$repoUri = "$apiBaseUrl/repos/$Owner/$RepoName"
 	try {
-		$repoResponse = Invoke-WebRequest -Uri $repoUri -Method Get -Headers $headers
+		$repoResponse = Invoke-WebRequest -Uri $repoUri -Method Get -Headers $headers -SkipHttpErrorCheck
 	}
 	catch {
 		$errorMsg = "Error: Failed to fetch default branch for $RepoName. Exception: $($_.Exception.Message)"
@@ -71,7 +71,7 @@ function Add-Branch {
 	# 2) Fetch SHA of default branch
 	$branchUri = "$apiBaseUrl/repos/$Owner/$RepoName/branches/$defaultBranch"
 	try {
-		$shaResponse = Invoke-WebRequest -Uri $branchUri -Method Get -Headers $headers
+		$shaResponse = Invoke-WebRequest -Uri $branchUri -Method Get -Headers $headers -SkipHttpErrorCheck
 	}
 	catch {
 		$errorMsg = "Error: Failed to fetch SHA for branch $defaultBranch in $RepoName. Exception: $($_.Exception.Message)"
@@ -113,7 +113,7 @@ function Add-Branch {
 	} | ConvertTo-Json -Compress
 
 	try {
-		$createResponse = Invoke-WebRequest -Uri $createUri -Method Post -Headers $headers -Body $body
+		$createResponse = Invoke-WebRequest -Uri $createUri -Method Post -Headers $headers -Body $body -SkipHttpErrorCheck
 	}
 	catch {
 		$errorMsg = "Error: Failed to create branch $BranchName. Exception: $($_.Exception.Message)"
