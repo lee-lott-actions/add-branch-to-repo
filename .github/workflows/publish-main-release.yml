@@ -12,11 +12,13 @@ env:
   PRERELEASE_SUFFIX: 'Dev'
   AUTO_MERGE_SOURCE_BRANCH: 'main'
   AUTO_MERGE_TARGET_BRANCH: 'development'
+  DEPLOYMENT_ENVIRONMENT: 'Production'
 
 permissions:
   contents: write
   actions: write
   pull-requests: write
+  deployments: write
 
 jobs:
   create-github-release:
@@ -69,13 +71,15 @@ jobs:
           private-key: ${{ secrets.DEVOPSBOT_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}      
           permission-contents: write
-          permission-pull-requests: write           
+          permission-pull-requests: write
+          permission-deployments: write
           
       - name: Deploy GitHub Action
-        uses: lee-lott-actions/deploy-github-action@v1
+        uses: lee-lott-actions/deploy-github-action@v2
         with:
           version-tag: ${{ env.version-tag }}
           branch-name: ${{ github.ref_name }}
+          deployment-environment: ${{ env.DEPLOYMENT_ENVIRONMENT }}
           org-name: ${{ github.repository_owner }}     
           repo-name: ${{ github.event.repository.name }}
           token: ${{ steps.token.outputs.token }}

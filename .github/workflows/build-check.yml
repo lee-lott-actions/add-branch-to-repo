@@ -6,6 +6,7 @@ on:
 
 jobs:
   tests:
+    if: github.event.pull_request.user.login != vars.DEVOPS_BOT_NAME
     name: Build Check
     runs-on: ubuntu-latest
 
